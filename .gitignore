@@ -1,3 +1,6 @@
+# Ignoring relations.txt file
+relations.txt
+
 # Compiled class file
 *.class
 
