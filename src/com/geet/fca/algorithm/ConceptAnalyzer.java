@@ -9,18 +9,22 @@ import java.util.Set;
 
 /**
  * 
- * @author chandradasdipok 11-Nov-2017 This class analyzes a single issue and
- *         helps to formulate the Formal Concept Analysis (FCA)
+ * 	@author chandradasdipok 
+ *	@date 11-Nov-2017 
+ *	This class analyzes a context and
+ *      helps to formulate the Formal Concept Analysis (FCA)
  *
  */
 public class ConceptAnalyzer {
 
-	// the anylzed issue
+	// the anylzed context
 	Context context = null;
 
 	public ConceptAnalyzer(Context context) {
 		this.context = context;
 		int i=0;
+		// gives each attribute a value for ordering
+		// which is used in "lectic order"
 		for (Attribute attribute : context.getAttributes()) {
 			attribute.setValue(i);
 			for (String moduleKey : context.getObjects().keySet()) {
@@ -32,40 +36,21 @@ public class ConceptAnalyzer {
 			}
 			i++;
 		}
-	///*
-		for (Attribute attr : context.getAttributes()) {
-			System.out.println(attr.getAttributeString()+","+attr.getValue());
-		}
-		System.out.println("Relations");
-		for (String moduleKey : context.getObjects().keySet()) {
-			System.out.println(moduleKey);
-			for (Attribute attr : context.getObjects().get(moduleKey).attributes) {
-				System.out.println(attr.getAttributeString()+","+attr.getValue());
-			}
-		}
-	//*/
 	}
 
-	// Generate all the nodes of fca graph of an issue
+	// Generate all the nodes of fca graph of context
 	// using next closure algorithms
 	// The algorithm is proposed by Ganter et. al at 1992
+	// The algorithms can be find at 
+	//<a href="https://link.springer.com/chapter/10.1007%2F978-3-642-11928-6_22?LI=true">Two basic alogorithms in Concept Analysis</a>
 	public Set<Node> generateNodesOfGraph() {
 		Set<Node> nodes = new HashSet<Node>();
 		List<Attribute> attributes = new ArrayList<>(Attribute.getClonedEvents(context.getAttributes()));
 		Collections.sort(attributes);
-		//Collections.sort(attributes);
-		//	/*
-		System.out.println("Eventsssssssss");
-		for (Attribute attr : attributes) {
-			System.out.println(attr+","+attr.getValue());
-		}
-	//	*/
 		Set<Attribute> closedSet = getFirstClosure();
 		int i = 0;
-		while (i < 100) {
-			System.out.println("No. " + i + ": Closed Sets " + closedSet);
+		while (true) {
 			Node node = generateNodeFromAClosedSet(Attribute.getClonedEvents(closedSet));
-			System.out.println("No. " + i + ": Node "+node);
 			nodes.add(node);
 			if (closedSet.equals(context.getAttributes())) {
 				break;
@@ -73,6 +58,12 @@ public class ConceptAnalyzer {
 			closedSet = Attribute.getClonedEvents(getNextClosedSet(Attribute.getClonedEvents(closedSet),
 					attributes));
 			i++;
+			
+			// if the total number of closures greater 
+			//than 1000000 then force break;
+			if(i>=1000000){
+				break;
+			}
 		}
 		return nodes;
 	}
@@ -98,9 +89,6 @@ public class ConceptAnalyzer {
 				nextClosedSet.addAll(closedSet);
 				nextClosedSet.add(m);
 				System.out.println("Next Closed Set "+nextClosedSet);
-				// System.out.println("Total Events "+issue.getEvents());
-				// System.out.println("Closures:
-				// "+closureOfEvents(nextClosedSet, CONTEXT_TABLE));
 				nextClosedSet = closureOfEvents(nextClosedSet);
 				System.out.println("Closures of Next Closed Set "+nextClosedSet);
 				if (!hasLessThanElementM(Attribute.getClonedEvents(nextClosedSet), Attribute.getClonedEvents(closedSet), m)) {
@@ -113,34 +101,32 @@ public class ConceptAnalyzer {
 		return new HashSet<Attribute>();
 	}
 
-	// Here events are attributes of FCA
 	// It takes the attribute set
 	// returns the closures of given attributes
 	private Set<Attribute> closureOfEvents(Set<Attribute> attributes) {
 		Set<Attribute> closure = new HashSet<Attribute>();
 		Set<String> transactionsID = new HashSet<String>();
 
-		// collects the transactions which has common attributes i.e., events
+		// collects the objects which has common attributes 
 		for (String moduleKey : context.getObjects().keySet()) {
 			if (context.getObjects().get(moduleKey).attributes.containsAll(attributes)) {
 				transactionsID.add(moduleKey);
-				// System.out.println("Module Key"+moduleKey);
 			}
 		}
 
-		// if the object set of common attributes i.e., events is empty then
+		// if the object set of common attributes is empty then
 		// return all the attributes
 		if (transactionsID.size() == 0) {
 			return Attribute.getClonedEvents(context.getAttributes());
 		}
-		// other wise take the intersection of all the events of objects
+		// other wise take the intersection of all the attributes of objects
 		else {
 			for (String transactionKey : transactionsID) {
 				if (closure.size() == 0) {
-					// store first module's events as closure
+					// store all attributes as closure
 					closure = Attribute.getClonedEvents(context.getObjects().get(transactionKey).attributes);
 				} else {
-					// intersection of module's events given transactions with
+					// intersection of objects's  attributes 
 					// closure
 					closure.retainAll(Attribute.getClonedEvents(context.getObjects().get(transactionKey).attributes));
 				}
@@ -154,20 +140,13 @@ public class ConceptAnalyzer {
 	// detect whether there is difference between closed set and
 	// next closed set less than m
 	private boolean hasLessThanElementM(Set<Attribute> nextClosedSet, Set<Attribute> closedSet, Attribute attributeM) {
-		// System.out.println("Element Check "+eventM);
-		// System.out.println(nextClosedSet);
-		// System.out.println(closedSet);
 		Set<Attribute> diff = nextClosedSet;
 		diff.removeAll(closedSet);
-		// System.out.println(diff);
 		// if has elements less than eventM
 		// return true
 		// else return false
 		for (Attribute attr : diff) {
-			//if (eventM.getEventString().compareTo(event.getEventString()) > 0) {
-			//System.out.println(eventM.getValue()+","+event.getValue());
 			if(attributeM.getValue() > attr.getValue()){
-				// System.out.println("Smallest New Element "+ event);
 				return true;
 			}
 		}
